@@ -164,79 +164,8 @@ bool isValidId(const string& id) {
     return id.length() == 9 && all_of(id.begin(), id.end(), ::isdigit);
 }
 
-void LoadCustomers(Bank& bank, const string& fileName) {
-    ifstream file(fileName);
-    if (file.is_open()) {
-        string line;
-        while (getline(file, line)) {
-            stringstream ss(line);
-            string name, id;
-            ss >> name >> id;
-            bank.AddCustomer(name, id);
-        }
-        file.close();
-    } else {
-        cout << "Ошибка загрузки файла клиентов." << endl;
-    }
-}
-
-
-void LoadAccounts(Bank& bank, const string& fileName) {
-    ifstream file(fileName);
-    if (file.is_open()) {
-        string line;
-        while (getline(file, line)) {
-            stringstream ss(line);
-            int accountType;
-            double balance, interestRate, overdraftLimit;
-            ss >> accountType >> balance;
-
-            switch (accountType) {
-                case 1:  
-                    ss >> interestRate;
-                    bank.AddAccount(make_shared<SavingsAccount>(balance, interestRate));
-                    break;
-                case 2:  
-                    ss >> overdraftLimit;
-                    bank.AddAccount(make_shared<CheckingAccount>(balance, overdraftLimit));
-                    break;
-                case 3:  
-                    bank.AddAccount(make_shared<BusinessAccount>(balance));
-                    break;
-                default:
-                    cout << "Неизвестный тип аккаунта: " << accountType << endl;
-                    break;
-            }
-        }
-        file.close();
-    } else {
-        cout << "Ошибка загрузки файла аккаунтов." << endl;
-    }
-}
-
-void SaveAccounts(const Bank& bank, const string& fileName) {
-    ofstream file(fileName);
-    if (file.is_open()) {
-        for (const auto& account : bank.GetAccounts()) {
-            file << account->GetType() << " " << account->GetBalance();
-            if (auto savings = dynamic_pointer_cast<SavingsAccount>(account)) {
-                file << " " << savings->GetInterestRate();
-            } else if (auto checking = dynamic_pointer_cast<CheckingAccount>(account)) {
-                file << " " << checking->GetOverdraftLimit();
-            }
-            file << endl;
-        }
-        file.close();
-    } else {
-        cout << "Ошибка сохранения файла аккаунтов." << endl;
-    }
-}
-
 int main() {
     Bank bank;
-    LoadCustomers(bank, "customers.txt");
-    LoadAccounts(bank, "accounts.txt");
-
     int numAccounts;
     cout << "Введите количество аккаунтов: ";
     cin >> numAccounts;
@@ -278,12 +207,11 @@ int main() {
     }
 
 
-    SaveCustomers(bank, "customers.txt");
-    SaveAccounts(bank, "accounts.txt");
-
-
     bank.ShowCustomers();
     bank.ShowAccounts();
 
     return 0;
-} }
+} 
+
+
+
