@@ -1,8 +1,10 @@
 #include <iostream>
 #include <memory>
 #include <vector>
-using namespace std;
+#include <sstream>
+#include <string>
 #include <algorithm>
+using namespace std;
 
 
 class Customer {
@@ -126,12 +128,10 @@ public:
         accounts.push_back(account);
     }
 
-    shared_ptr<Account> GetAccount(int index) const {
-        if (index < 0 || index >= accounts.size()) {
-            return nullptr; 
-        }
-        return accounts[index];
+    vector<shared_ptr<Account>> GetAccounts() const {
+        return accounts;
     }
+
 
     void ShowAccounts() const {
         for (const auto& account : accounts) {
@@ -164,31 +164,78 @@ bool isValidId(const string& id) {
     return id.length() == 9 && all_of(id.begin(), id.end(), ::isdigit);
 }
 
+void LoadCustomers(Bank& bank, const string& fileName) {
+    ifstream file(fileName);
+    if (file.is_open()) {
+        string line;
+        while (getline(file, line)) {
+            stringstream ss(line);
+            string name, id;
+            ss >> name >> id;
+            bank.AddCustomer(name, id);
+        }
+        file.close();
+    } else {
+        cout << "Ошибка загрузки файла клиентов." << endl;
+    }
+}
+
+
+void LoadAccounts(Bank& bank, const string& fileName) {
+    ifstream file(fileName);
+    if (file.is_open()) {
+        string line;
+        while (getline(file, line)) {
+            stringstream ss(line);
+            int accountType;
+            double balance, interestRate, overdraftLimit;
+            ss >> accountType >> balance;
+
+            switch (accountType) {
+                case 1:  
+                    ss >> interestRate;
+                    bank.AddAccount(make_shared<SavingsAccount>(balance, interestRate));
+                    break;
+                case 2:  
+                    ss >> overdraftLimit;
+                    bank.AddAccount(make_shared<CheckingAccount>(balance, overdraftLimit));
+                    break;
+                case 3:  
+                    bank.AddAccount(make_shared<BusinessAccount>(balance));
+                    break;
+                default:
+                    cout << "Неизвестный тип аккаунта: " << accountType << endl;
+                    break;
+            }
+        }
+        file.close();
+    } else {
+        cout << "Ошибка загрузки файла аккаунтов." << endl;
+    }
+}
+
+void SaveAccounts(const Bank& bank, const string& fileName) {
+    ofstream file(fileName);
+    if (file.is_open()) {
+        for (const auto& account : bank.GetAccounts()) {
+            file << account->GetType() << " " << account->GetBalance();
+            if (auto savings = dynamic_pointer_cast<SavingsAccount>(account)) {
+                file << " " << savings->GetInterestRate();
+            } else if (auto checking = dynamic_pointer_cast<CheckingAccount>(account)) {
+                file << " " << checking->GetOverdraftLimit();
+            }
+            file << endl;
+        }
+        file.close();
+    } else {
+        cout << "Ошибка сохранения файла аккаунтов." << endl;
+    }
+}
+
 int main() {
     Bank bank;
-
-    int numCustomers; 
-    cout << "Введите количество клиентов: ";    
-    cin >> numCustomers;
-
-    for (int i = 0; i < numCustomers; ++i) {
-        string name, id;
-        cout << "Введите имя клиента #" << (i + 1) << ": ";
-        cin >> name;
-
-        do {
-            cout << "Введите ID клиента #" << (i + 1) << " (ровно 9 чисел): ";
-            cin >> id;
-            if (!isValidId(id)) {
-                cout << "Ошибка: ID должен состоять ровно из 9 цифр!" << endl;
-            }
-        } while (!isValidId(id));
-
-        bank.AddCustomer(name, id);
-    }
-
-
-   
+    LoadCustomers(bank, "customers.txt");
+    LoadAccounts(bank, "accounts.txt");
 
     int numAccounts;
     cout << "Введите количество аккаунтов: ";
@@ -202,7 +249,7 @@ int main() {
         cin >> initialBalance;
 
         while (true) {
-            cout << "Введите тип аккаунта (1-Сберегательный, 2-Расчетный, 3-Бизнес): ";
+            cout << "Введите тип аккаунта (1 - Сберегательный, 2 - Расчетный, 3 - Бизнес): ";
             cin >> accountType;
 
             if (accountType >= 1 && accountType <= 3) {
@@ -219,7 +266,7 @@ int main() {
             bank.AddAccount(make_shared<SavingsAccount>(initialBalance, interestRate));
         } else if (accountType == 2) {
             double overdraftLimit;
-            cout << "Введите лимит овердрафта(максимальная сумма, на которую можно уходить в минус.): ";
+            cout << "Введите лимит овердрафта (максимальная сумма, на которую можно уходить в минус): ";
             cin >> overdraftLimit;
             bank.AddAccount(make_shared<CheckingAccount>(initialBalance, overdraftLimit));
         } else if (accountType == 3) {
@@ -230,10 +277,13 @@ int main() {
              << " и типом: " << accountType << endl;
     }
 
+
+    SaveCustomers(bank, "customers.txt");
+    SaveAccounts(bank, "accounts.txt");
+
+
     bank.ShowCustomers();
     bank.ShowAccounts();
 
     return 0;
-}
-
-
+} }
